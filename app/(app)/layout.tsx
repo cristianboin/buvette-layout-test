@@ -16,7 +16,8 @@ import {
   Package,
   Calendar,
   Settings,
-  LogOut
+  LogOut,
+  Sparkles
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 
@@ -29,6 +30,7 @@ const bottomNav = [
 ]
 
 const hamburgerMenu = [
+  { href: '/chiedi', icon: Sparkles, label: 'Chiedi (AI)' },
   { href: '/documenti', icon: FileText, label: 'Documenti' },
   { href: '/fornitori', icon: Truck, label: 'Fornitori' },
   { href: '/prodotti', icon: Package, label: 'Prodotti' },
