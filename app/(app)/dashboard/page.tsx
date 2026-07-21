@@ -25,7 +25,7 @@ export default function DashboardPage() {
   const [events, setEvents] = useState<Ev[]>([])
   const [numDocs, setNumDocs] = useState(0)
   const [daConfermare, setDaConfermare] = useState(0)
-  const [season, setSeason] = useState('all')
+  const [season, setSeason] = useState(seasonFromDate(new Date().toISOString().slice(0, 10)) || 'all')
   const router = useRouter()
   const supabase = createClient()
 

@@ -18,6 +18,7 @@ type Item = {
   total_incl: number
   categories: { name: string } | null
 }
+type CatRow = { name: string; total: number; subs: { name: string; total: number }[] }
 
 export default function FornitoreDettaglioPage() {
   const params = useParams()
@@ -25,7 +26,8 @@ export default function FornitoreDettaglioPage() {
   const supabase = createClient()
   const [name, setName] = useState('')
   const [invoices, setInvoices] = useState<Invoice[]>([])
-  const [catTotals, setCatTotals] = useState<Record<string, number>>({})
+  const [catRows, setCatRows] = useState<CatRow[]>([])
+  const [openCat, setOpenCat] = useState<string | null>(null)
   const [openInvoice, setOpenInvoice] = useState<string | null>(null)
   const [items, setItems] = useState<Record<string, Item[]>>({})
 
@@ -46,15 +48,26 @@ export default function FornitoreDettaglioPage() {
 
       const { data: allItems } = await supabase
         .from('invoice_items')
-        .select('total_incl, categories(name), invoices!inner(supplier_id)')
+        .select('total_incl, categories(name), products(subcategory), invoices!inner(supplier_id)')
         .eq('invoices.supplier_id', supplierId)
-      
-      const totals: Record<string, number> = {}
+
+      const map = new Map<string, { total: number; subs: Map<string, number> }>()
       for (const item of (allItems || []) as any[]) {
         const catName = item.categories?.name || 'Senza categoria'
-        totals[catName] = (totals[catName] || 0) + Number(item.total_incl || 0)
+        const subName = item.products?.subcategory || 'Altro'
+        const cur = map.get(catName) || { total: 0, subs: new Map<string, number>() }
+        cur.total += Number(item.total_incl || 0)
+        cur.subs.set(subName, (cur.subs.get(subName) || 0) + Number(item.total_incl || 0))
+        map.set(catName, cur)
       }
-      setCatTotals(totals)
+      const rows: CatRow[] = Array.from(map.entries())
+        .map(([nm, v]) => ({
+          name: nm,
+          total: v.total,
+          subs: Array.from(v.subs.entries()).map(([sn, st]) => ({ name: sn, total: st })).sort((a, b) => b.total - a.total),
+        }))
+        .sort((a, b) => b.total - a.total)
+      setCatRows(rows)
     }
     load()
   }, [supplierId])
@@ -73,6 +86,7 @@ export default function FornitoreDettaglioPage() {
   }
 
   const total = invoices.reduce((s, i) => s + Number(i.total_incl || 0), 0)
+  const fmt = (n: number) => 'CHF ' + n.toLocaleString('it-CH', { minimumFractionDigits: 2 })
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
@@ -82,17 +96,32 @@ export default function FornitoreDettaglioPage() {
         </button>
         <div>
           <h1 className="text-xl font-bold text-gray-900">{name}</h1>
-          <p className="text-sm text-gray-500">Totale: CHF {total.toLocaleString('it-CH', { minimumFractionDigits: 2 })}</p>
+          <p className="text-sm text-gray-500">Totale: {fmt(total)}</p>
         </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-6">
         <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Per categoria</h2>
-        <div className="space-y-2">
-          {Object.entries(catTotals).sort((a, b) => b[1] - a[1]).map(([cat, tot]) => (
-            <div key={cat} className="flex items-center justify-between">
-              <span className="text-sm text-gray-700">{cat}</span>
-              <span className="text-sm font-semibold text-gray-900">CHF {tot.toLocaleString('it-CH', { minimumFractionDigits: 2 })}</span>
+        <div className="space-y-1">
+          {catRows.map(cat => (
+            <div key={cat.name}>
+              <button onClick={() => setOpenCat(openCat === cat.name ? null : cat.name)} className="w-full flex items-center justify-between py-1.5 text-left">
+                <span className="flex items-center gap-1.5 text-sm text-gray-700">
+                  {openCat === cat.name ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+                  {cat.name}
+                </span>
+                <span className="text-sm font-semibold text-gray-900">{fmt(cat.total)}</span>
+              </button>
+              {openCat === cat.name && (
+                <div className="pl-6 pb-2 space-y-1">
+                  {cat.subs.map(s => (
+                    <div key={s.name} className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">{s.name}</span>
+                      <span className="text-xs font-medium text-gray-600">{fmt(s.total)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -110,7 +139,7 @@ export default function FornitoreDettaglioPage() {
                 <p className="text-sm font-semibold text-gray-900">#{inv.invoice_number}</p>
                 <p className="text-xs text-gray-400">{new Date(inv.invoice_date).toLocaleDateString('it-CH')}</p>
               </div>
-              <span className="text-sm font-bold text-gray-900">CHF {Number(inv.total_incl).toLocaleString('it-CH', { minimumFractionDigits: 2 })}</span>
+              <span className="text-sm font-bold text-gray-900">{fmt(Number(inv.total_incl))}</span>
               {openInvoice === inv.id ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
             </button>
             {openInvoice === inv.id && items[inv.id] && (
