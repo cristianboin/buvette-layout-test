@@ -1,4 +1,14 @@
-'use client'
+import fs from 'fs'
+
+const candidates = ['app/(app)/prodotti/page.tsx']
+
+const path = candidates.find(p => fs.existsSync(p))
+if (!path) {
+  console.error('ERRORE: non trovo la pagina prodotti')
+  process.exit(1)
+}
+
+const content = `'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase'
@@ -46,40 +56,17 @@ export default function ProdottiPage() {
     return Array.from(s).sort().reverse()
   }, [rows])
 
-  // righe filtrate per anno ed evento (senza filtro categoria): servono al riepilogo
-  const baseRows = useMemo(() => rows.filter(r => {
-    if (!r.products) return false
-    if (year !== 'all' && r.invoices?.invoice_date?.slice(0, 4) !== year) return false
-    if (ev !== 'all' && r.invoices?.event_id !== ev) return false
-    return true
-  }), [rows, year, ev])
-
-  // riepilogo per categoria
-  const summary = useMemo(() => {
-    const map = new Map<string, { name: string; nProd: Set<string>; total: number }>()
-    baseRows.forEach(r => {
-      const key = r.category_id || 'none'
-      const cur = map.get(key) || {
-        name: cats.find(c => c.id === r.category_id)?.name || 'Senza categoria',
-        nProd: new Set<string>(),
-        total: 0,
-      }
-      cur.nProd.add(r.product_id || r.products!.canonical_name)
-      cur.total += Number(r.total_incl) || 0
-      map.set(key, cur)
-    })
-    return Array.from(map.values()).sort((a, b) => b.total - a.total)
-  }, [baseRows, cats])
-
-  // lista prodotti (con anche il filtro categoria)
   const list = useMemo(() => {
     const map = new Map<string, { name: string; unit: string; catName: string; qty: number; total: number }>()
-    baseRows.forEach(r => {
+    rows.forEach(r => {
+      if (!r.products) return
+      if (year !== 'all' && r.invoices?.invoice_date?.slice(0, 4) !== year) return
       if (cat !== 'all' && r.category_id !== cat) return
-      const key = r.product_id || r.products!.canonical_name
+      if (ev !== 'all' && r.invoices?.event_id !== ev) return
+      const key = r.product_id || r.products.canonical_name
       const cur = map.get(key) || {
-        name: r.products!.canonical_name,
-        unit: r.products!.default_unit || '',
+        name: r.products.canonical_name,
+        unit: r.products.default_unit || '',
         catName: cats.find(c => c.id === r.category_id)?.name || '',
         qty: 0,
         total: 0,
@@ -89,9 +76,9 @@ export default function ProdottiPage() {
       map.set(key, cur)
     })
     return Array.from(map.values()).sort((a, b) => b.total - a.total)
-  }, [baseRows, cat, cats])
+  }, [rows, year, cat, ev, cats])
 
-  const grandTotal = summary.reduce((s, c) => s + c.total, 0)
+  const totalSpend = list.reduce((s, p) => s + p.total, 0)
   const fmtQty = (n: number) => Number.isInteger(n) ? String(n) : n.toFixed(1)
   const fmtChf = (n: number) => 'CHF ' + n.toLocaleString('it-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
@@ -99,34 +86,7 @@ export default function ProdottiPage() {
     <div className="p-4 max-w-2xl mx-auto">
       <div className="mb-4">
         <h1 className="text-xl font-bold text-gray-900">Prodotti</h1>
-        <p className="text-sm text-gray-500 mt-1">{list.length} prodotti</p>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-4">
-        <p className="text-sm font-semibold text-gray-900 mb-3">Riepilogo per categoria</p>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-xs text-gray-400 border-b border-gray-100">
-              <th className="text-left font-medium pb-2">Categoria</th>
-              <th className="text-right font-medium pb-2">Prodotti</th>
-              <th className="text-right font-medium pb-2">Spesa</th>
-            </tr>
-          </thead>
-          <tbody>
-            {summary.map((c, i) => (
-              <tr key={i} className="border-b border-gray-50">
-                <td className="py-2 text-gray-700">{c.name}</td>
-                <td className="py-2 text-right text-gray-500">{c.nProd.size}</td>
-                <td className="py-2 text-right font-medium text-gray-900">{fmtChf(c.total)}</td>
-              </tr>
-            ))}
-            <tr>
-              <td className="pt-2 font-semibold text-gray-900">Totale</td>
-              <td className="pt-2 text-right text-gray-500">{summary.reduce((s, c) => s + c.nProd.size, 0)}</td>
-              <td className="pt-2 text-right font-bold text-gray-900">{fmtChf(grandTotal)}</td>
-            </tr>
-          </tbody>
-        </table>
+        <p className="text-sm text-gray-500 mt-1">{list.length} prodotti · {fmtChf(totalSpend)} spesa totale</p>
       </div>
 
       <div className="grid grid-cols-3 gap-2 mb-4">
@@ -174,3 +134,7 @@ export default function ProdottiPage() {
     </div>
   )
 }
+`
+
+fs.writeFileSync(path, content)
+console.log('Pagina prodotti aggiornata:', path)
