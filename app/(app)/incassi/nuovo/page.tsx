@@ -36,6 +36,10 @@ export default function NuovoIncassoPage() {
   const selectedEvent = events.find(e => e.id === eventId)
   const isCampionato = selectedEvent?.type === 'campionato'
 
+  const visibleCategories = isCampionato
+    ? categories.filter(c => ['Buvette', 'Griglia / Cucina', 'Entrate campo'].includes(c.name))
+    : categories
+
   function setAmount(catId: string, field: 'cash' | 'card', value: string) {
     setAmounts(prev => ({
       ...prev,
@@ -126,7 +130,7 @@ export default function NuovoIncassoPage() {
                 <span className="text-right">Contanti</span>
                 <span className="text-right">Carta/TWINT</span>
               </div>
-              {categories.map(cat => (
+              {visibleCategories.map(cat => (
                 <div key={cat.id} className="grid grid-cols-3 gap-2 items-center">
                   <span className="text-sm text-gray-700">{cat.name}</span>
                   <input
