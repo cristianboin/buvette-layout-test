@@ -2,18 +2,30 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
-import { Truck } from 'lucide-react'
+import { Truck, ChevronRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
-type Supplier = { id: string; name: string; vat_number: string; address: string }
+type Supplier = { id: string; name: string; total: number }
 
 export default function FornitoriPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const supabase = createClient()
+  const router = useRouter()
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase.from('suppliers').select('id, name, vat_number, address').order('name')
-      if (data) setSuppliers(data)
+      const { data: sups } = await supabase.from('suppliers').select('id, name').order('name')
+      const { data: invs } = await supabase.from('invoices').select('supplier_id, total_incl').eq('status', 'confirmed')
+      const { data: mans } = await supabase.from('manual_expenses').select('supplier_id, amount_incl').eq('status', 'confirmed')
+      if (!sups) return
+      const totals: Record<string, number> = {}
+      for (const i of invs || []) {
+        if (i.supplier_id) totals[i.supplier_id] = (totals[i.supplier_id] || 0) + Number(i.total_incl || 0)
+      }
+      for (const m of mans || []) {
+        if (m.supplier_id) totals[m.supplier_id] = (totals[m.supplier_id] || 0) + Number(m.amount_incl || 0)
+      }
+      setSuppliers(sups.map(s => ({ ...s, total: totals[s.id] || 0 })).sort((a, b) => b.total - a.total))
     }
     load()
   }, [])
@@ -26,16 +38,16 @@ export default function FornitoriPage() {
       </div>
       <div className="space-y-3">
         {suppliers.map(s => (
-          <div key={s.id} className="bg-white rounded-2xl border border-gray-200 p-4 flex items-center gap-4">
+          <button key={s.id} onClick={() => router.push(`/fornitori/${s.id}`)} className="w-full bg-white rounded-2xl border border-gray-200 p-4 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left">
             <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
               <Truck size={18} className="text-gray-600" />
             </div>
-            <div>
+            <div className="flex-1">
               <p className="text-sm font-semibold text-gray-900">{s.name}</p>
-              {s.vat_number && <p className="text-xs text-gray-400 mt-0.5">IVA: {s.vat_number}</p>}
-              {s.address && <p className="text-xs text-gray-400">{s.address}</p>}
+              <p className="text-xs text-gray-400 mt-0.5">Totale speso: CHF {s.total.toLocaleString('it-CH', { minimumFractionDigits: 2 })}</p>
             </div>
-          </div>
+            <ChevronRight size={18} className="text-gray-400" />
+          </button>
         ))}
       </div>
     </div>

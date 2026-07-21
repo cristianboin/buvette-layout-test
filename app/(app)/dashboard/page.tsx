@@ -7,31 +7,44 @@ import { TrendingDown, TrendingUp, FileText, AlertCircle } from 'lucide-react'
 
 export default function DashboardPage() {
   const [email, setEmail] = useState('')
+  const [spese, setSpese] = useState(0)
+  const [incassi, setIncassi] = useState(0)
+  const [numDocs, setNumDocs] = useState(0)
+  const [daConfermare, setDaConfermare] = useState(0)
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
-    async function getUser() {
+    async function load() {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-        return
-      }
+      if (!user) { router.push('/login'); return }
       setEmail(user.email ?? '')
+
+      const [{ data: inv }, { data: manExp }, { data: inc }, { count: docsCount }, { count: pendingCount }] = await Promise.all([
+        supabase.from('invoices').select('total_incl').eq('status', 'confirmed'),
+        supabase.from('manual_expenses').select('amount_incl').eq('status', 'confirmed'),
+        supabase.from('income_entries').select('total').eq('status', 'confirmed'),
+        supabase.from('documents').select('*', { count: 'exact', head: true }),
+        supabase.from('documents').select('*', { count: 'exact', head: true }).in('status', ['pending', 'to_confirm']),
+      ])
+
+      const totInv = (inv || []).reduce((s, i) => s + (Number(i.total_incl) || 0), 0)
+      const totMan = (manExp || []).reduce((s, i) => s + (Number(i.amount_incl) || 0), 0)
+      setSpese(totInv + totMan)
+      setIncassi((inc || []).reduce((s, i) => s + (Number(i.total) || 0), 0))
+      setNumDocs(docsCount || 0)
+      setDaConfermare(pendingCount || 0)
     }
-    getUser()
+    load()
   }, [])
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
-
-      {/* Benvenuto */}
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900">Buongiorno 👋</h1>
         <p className="text-sm text-gray-500 mt-1">{email}</p>
       </div>
 
-      {/* Cards riassunto */}
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="bg-white rounded-2xl p-4 border border-gray-200">
           <div className="flex items-center gap-2 mb-3">
@@ -40,8 +53,8 @@ export default function DashboardPage() {
             </div>
             <span className="text-xs font-medium text-gray-500">Spese</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">—</p>
-          <p className="text-xs text-gray-400 mt-1">questo mese</p>
+          <p className="text-xl font-bold text-gray-900">CHF {spese.toLocaleString('it-CH', { minimumFractionDigits: 2 })}</p>
+          <p className="text-xs text-gray-400 mt-1">totale confermate</p>
         </div>
 
         <div className="bg-white rounded-2xl p-4 border border-gray-200">
@@ -51,8 +64,8 @@ export default function DashboardPage() {
             </div>
             <span className="text-xs font-medium text-gray-500">Incassi</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">—</p>
-          <p className="text-xs text-gray-400 mt-1">questo mese</p>
+          <p className="text-xl font-bold text-gray-900">CHF {incassi.toLocaleString('it-CH', { minimumFractionDigits: 2 })}</p>
+          <p className="text-xs text-gray-400 mt-1">totale confermati</p>
         </div>
 
         <div className="bg-white rounded-2xl p-4 border border-gray-200">
@@ -62,7 +75,7 @@ export default function DashboardPage() {
             </div>
             <span className="text-xs font-medium text-gray-500">Documenti</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">—</p>
+          <p className="text-xl font-bold text-gray-900">{numDocs}</p>
           <p className="text-xs text-gray-400 mt-1">caricati</p>
         </div>
 
@@ -73,47 +86,37 @@ export default function DashboardPage() {
             </div>
             <span className="text-xs font-medium text-gray-500">Da confermare</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">—</p>
+          <p className="text-xl font-bold text-gray-900">{daConfermare}</p>
           <p className="text-xs text-gray-400 mt-1">documenti</p>
         </div>
       </div>
 
-      {/* Azioni rapide */}
       <div className="mb-6">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Azioni rapide</h2>
         <div className="grid grid-cols-3 gap-3">
-          <button
-            onClick={() => router.push('/registra')}
-            className="bg-green-600 text-white rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-green-700 transition-colors"
-          >
+          <button onClick={() => router.push('/incassi/nuovo')} className="bg-green-600 text-white rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-green-700 transition-colors">
             <TrendingUp size={20} />
             <span className="text-xs font-medium">Incasso</span>
           </button>
-          <button
-            onClick={() => router.push('/documenti/nuovo')}
-            className="bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-gray-50 transition-colors"
-          >
+          <button onClick={() => router.push('/documenti/nuovo')} className="bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-gray-50 transition-colors">
             <FileText size={20} />
             <span className="text-xs font-medium">Documento</span>
           </button>
-          <button
-            onClick={() => router.push('/costi/nuovo')}
-            className="bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-gray-50 transition-colors"
-          >
+          <button onClick={() => router.push('/costi/nuovo')} className="bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-gray-50 transition-colors">
             <TrendingDown size={20} />
             <span className="text-xs font-medium">Spesa</span>
           </button>
         </div>
       </div>
 
-      {/* Ultimi movimenti */}
-      <div>
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">Ultimi movimenti</h2>
-        <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-          <p className="text-gray-400 text-sm">Nessun movimento ancora</p>
+      <div className="bg-white rounded-2xl border border-gray-200 p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold text-gray-900">Saldo</span>
+          <span className={`text-lg font-bold ${incassi - spese >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            CHF {(incassi - spese).toLocaleString('it-CH', { minimumFractionDigits: 2 })}
+          </span>
         </div>
       </div>
-
     </div>
   )
 }

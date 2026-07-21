@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { ArrowLeft, Check } from 'lucide-react'
 
-type Ev = { id: string; name: string }
+type Ev = { id: string; name: string; type: string }
 type Cat = { id: string; name: string }
 
 export default function NuovoIncassoPage() {
@@ -15,20 +15,16 @@ export default function NuovoIncassoPage() {
   const [categories, setCategories] = useState<Cat[]>([])
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
-  const [form, setForm] = useState({
-    date: new Date().toISOString().split('T')[0],
-    event_id: '',
-    category_id: '',
-    cash_amount: '',
-    card_amount: '',
-    other_amount: '',
-    notes: '',
-  })
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [eventId, setEventId] = useState('')
+  const [avversario, setAvversario] = useState('')
+  const [notes, setNotes] = useState('')
+  const [amounts, setAmounts] = useState<Record<string, { cash: string; card: string }>>({})
 
   useEffect(() => {
     async function loadData() {
       const [{ data: ev }, { data: cat }] = await Promise.all([
-        supabase.from('events').select('id, name').eq('status', 'active'),
+        supabase.from('events').select('id, name, type').in('status', ['active', 'closed']).order('name'),
         supabase.from('categories').select('id, name').eq('type', 'income').order('sort_order'),
       ])
       if (ev) setEvents(ev)
@@ -37,30 +33,45 @@ export default function NuovoIncassoPage() {
     loadData()
   }, [])
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+  const selectedEvent = events.find(e => e.id === eventId)
+  const isCampionato = selectedEvent?.type === 'campionato'
+
+  function setAmount(catId: string, field: 'cash' | 'card', value: string) {
+    setAmounts(prev => ({
+      ...prev,
+      [catId]: { ...(prev[catId] || { cash: '', card: '' }), [field]: value }
+    }))
   }
 
-  const total = parseFloat(form.cash_amount || '0') + parseFloat(form.card_amount || '0') + parseFloat(form.other_amount || '0')
+  const totalGeneral = Object.values(amounts).reduce((sum, a) => 
+    sum + parseFloat(a.cash || '0') + parseFloat(a.card || '0'), 0)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
-    const { error } = await supabase.from('income_entries').insert({
-      date: form.date,
-      event_id: form.event_id || null,
-      category_id: form.category_id || null,
-      cash_amount: parseFloat(form.cash_amount || '0'),
-      card_amount: parseFloat(form.card_amount || '0'),
-      other_amount: parseFloat(form.other_amount || '0'),
-      total,
-      notes: form.notes || null,
-      status: 'confirmed',
-      created_by: user?.id,
-      confirmed_by: user?.id,
-      confirmed_at: new Date().toISOString(),
-    })
+
+    const rows = Object.entries(amounts)
+      .filter(([, a]) => parseFloat(a.cash || '0') + parseFloat(a.card || '0') > 0)
+      .map(([catId, a]) => ({
+        date,
+        event_id: eventId || null,
+        category_id: catId,
+        cash_amount: parseFloat(a.cash || '0'),
+        card_amount: parseFloat(a.card || '0'),
+        other_amount: 0,
+        total: parseFloat(a.cash || '0') + parseFloat(a.card || '0'),
+        avversario: avversario || null,
+        notes: notes || null,
+        status: 'confirmed',
+        created_by: user?.id,
+        confirmed_by: user?.id,
+        confirmed_at: new Date().toISOString(),
+      }))
+
+    if (rows.length === 0) { setLoading(false); return }
+
+    const { error } = await supabase.from('income_entries').insert(rows)
     if (!error) { setSuccess(true); setTimeout(() => router.push('/incassi'), 1500) }
     setLoading(false)
   }
@@ -70,8 +81,8 @@ export default function NuovoIncassoPage() {
       <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
         <Check size={32} className="text-green-600" />
       </div>
-      <p className="font-semibold text-gray-900">Incasso registrato!</p>
-      <p className="text-sm text-gray-500">CHF {total.toFixed(2)}</p>
+      <p className="font-semibold text-gray-900">Incassi registrati!</p>
+      <p className="text-sm text-gray-500">CHF {totalGeneral.toFixed(2)}</p>
     </div>
   )
 
@@ -83,50 +94,72 @@ export default function NuovoIncassoPage() {
         </button>
         <h1 className="text-xl font-bold text-gray-900">Nuovo incasso</h1>
       </div>
+
       <form onSubmit={handleSubmit} className="space-y-4">
+
         <div className="bg-white rounded-2xl border border-gray-200 p-4">
           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Data</label>
-          <input type="date" name="date" value={form.date} onChange={handleChange} required className="w-full text-sm text-gray-900 focus:outline-none" />
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} required className="w-full text-sm text-gray-900 focus:outline-none" />
         </div>
+
         <div className="bg-white rounded-2xl border border-gray-200 p-4">
-          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Evento</label>
-          <select name="event_id" value={form.event_id} onChange={handleChange} className="w-full text-sm text-gray-900 focus:outline-none bg-transparent">
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Evento *</label>
+          <select value={eventId} onChange={e => setEventId(e.target.value)} required className="w-full text-sm text-gray-900 focus:outline-none bg-transparent">
             <option value="">Seleziona evento...</option>
             {events.map(ev => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
           </select>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-200 p-4">
-          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Categoria</label>
-          <select name="category_id" value={form.category_id} onChange={handleChange} className="w-full text-sm text-gray-900 focus:outline-none bg-transparent">
-            <option value="">Seleziona categoria...</option>
-            {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-          </select>
-        </div>
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 space-y-4">
-          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide">Importi (CHF)</label>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700">Contanti</span>
-            <input type="number" name="cash_amount" value={form.cash_amount} onChange={handleChange} min="0" step="0.05" placeholder="0.00" className="w-28 text-right text-sm text-gray-900 focus:outline-none border-b border-gray-200 pb-1" />
+
+        {isCampionato && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-4">
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Avversario</label>
+            <input type="text" value={avversario} onChange={e => setAvversario(e.target.value)} placeholder="Es. FC Lugano" className="w-full text-sm text-gray-900 focus:outline-none" />
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700">Carta / TWINT</span>
-            <input type="number" name="card_amount" value={form.card_amount} onChange={handleChange} min="0" step="0.05" placeholder="0.00" className="w-28 text-right text-sm text-gray-900 focus:outline-none border-b border-gray-200 pb-1" />
+        )}
+
+        {eventId && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-4">
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Importi per categoria (CHF)</label>
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-2 text-xs font-medium text-gray-400 pb-1 border-b border-gray-100">
+                <span>Categoria</span>
+                <span className="text-right">Contanti</span>
+                <span className="text-right">Carta/TWINT</span>
+              </div>
+              {categories.map(cat => (
+                <div key={cat.id} className="grid grid-cols-3 gap-2 items-center">
+                  <span className="text-sm text-gray-700">{cat.name}</span>
+                  <input
+                    type="number"
+                    value={amounts[cat.id]?.cash || ''}
+                    onChange={e => setAmount(cat.id, 'cash', e.target.value)}
+                    min="0" step="0.05" placeholder="0.00"
+                    className="text-right text-sm text-gray-900 focus:outline-none border-b border-gray-200 pb-1"
+                  />
+                  <input
+                    type="number"
+                    value={amounts[cat.id]?.card || ''}
+                    onChange={e => setAmount(cat.id, 'card', e.target.value)}
+                    min="0" step="0.05" placeholder="0.00"
+                    className="text-right text-sm text-gray-900 focus:outline-none border-b border-gray-200 pb-1"
+                  />
+                </div>
+              ))}
+              <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
+                <span className="text-sm font-semibold text-gray-900">Totale</span>
+                <span className="text-lg font-bold text-green-600">CHF {totalGeneral.toFixed(2)}</span>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700">Altro</span>
-            <input type="number" name="other_amount" value={form.other_amount} onChange={handleChange} min="0" step="0.05" placeholder="0.00" className="w-28 text-right text-sm text-gray-900 focus:outline-none border-b border-gray-200 pb-1" />
-          </div>
-          <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
-            <span className="text-sm font-semibold text-gray-900">Totale</span>
-            <span className="text-lg font-bold text-green-600">CHF {total.toFixed(2)}</span>
-          </div>
-        </div>
+        )}
+
         <div className="bg-white rounded-2xl border border-gray-200 p-4">
           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Note</label>
-          <textarea name="notes" value={form.notes} onChange={handleChange} rows={2} placeholder="Aggiungi una nota..." className="w-full text-sm text-gray-900 focus:outline-none resize-none" />
+          <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Aggiungi una nota..." className="w-full text-sm text-gray-900 focus:outline-none resize-none" />
         </div>
-        <button type="submit" disabled={loading || total === 0} className="w-full bg-green-600 text-white py-4 rounded-2xl font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors">
-          {loading ? 'Salvataggio...' : `Registra CHF ${total.toFixed(2)}`}
+
+        <button type="submit" disabled={loading || totalGeneral === 0} className="w-full bg-green-600 text-white py-4 rounded-2xl font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors">
+          {loading ? 'Salvataggio...' : `Registra CHF ${totalGeneral.toFixed(2)}`}
         </button>
       </form>
     </div>
