@@ -23,7 +23,7 @@ export default function IncassiPage() {
         .from('income_entries')
         .select('id, date, total, notes, categories(name), events(name)')
         .order('date', { ascending: false })
-      if (data) setEntries(data as Entry[])
+if (data) setEntries(data as unknown as Entry[])
     }
     load()
   }, [])

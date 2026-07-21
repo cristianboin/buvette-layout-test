@@ -13,7 +13,7 @@ export default function ProdottiPage() {
   useEffect(() => {
     async function load() {
       const { data } = await supabase.from('products').select('id, canonical_name, default_unit, categories(name)').order('canonical_name')
-      if (data) setProducts(data as Product[])
+      if (data) setProducts(data as unknown as Product[])
     }
     load()
   }, [])

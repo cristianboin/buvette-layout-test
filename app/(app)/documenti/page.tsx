@@ -30,7 +30,7 @@ export default function DocumentiPage() {
         .from('documents')
         .select('id, file_name, status, uploaded_at')
         .order('uploaded_at', { ascending: false })
-      if (data) setDocs(data as Doc[])
+  if (data) setEntries(data as unknown as Entry[])
     }
     load()
   }, [])
