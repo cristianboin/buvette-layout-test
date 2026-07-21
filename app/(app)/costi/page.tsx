@@ -24,7 +24,7 @@ export default function CostiPage() {
         .from('invoices')
         .select('id, invoice_date, invoice_number, total_incl, status, suppliers(name), events(name)')
         .order('invoice_date', { ascending: false })
-      if (data) setInvoices(data as Invoice[])
+      if (data) setInvoices(data as unknown as Invoice[])
     }
     load()
   }, [])
