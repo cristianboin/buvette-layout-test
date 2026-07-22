@@ -79,107 +79,119 @@ export default function DashboardPage() {
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
-      <div className="mb-4">
-        <h1 className="text-xl font-bold text-gray-900">Buongiorno 👋</h1>
-        <p className="text-sm text-gray-500 mt-1">{email}</p>
+      <div className="mb-5">
+        <h1 className="text-2xl font-bold tracking-tight text-ink">Buongiorno 👋</h1>
+        <p className="text-sm text-muted mt-0.5">{email}</p>
       </div>
 
-      <div className="flex gap-2 mb-4">
-        <div className="flex-1 flex items-center gap-2 bg-white border border-gray-200 rounded-2xl px-4 py-3">
-          <Sparkles size={16} className="text-purple-500 flex-shrink-0" />
+      <div className="flex gap-2 mb-5">
+        <div className="flex-1 flex items-center gap-3 bg-surface border border-line rounded-2xl px-4 py-3.5 shadow-sm transition focus-within:border-green-400 focus-within:ring-2 focus-within:ring-green-500/25">
+          <Sparkles size={18} className="text-amber-500 flex-shrink-0" />
           <input
             type="text"
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && query.trim()) router.push('/chiedi?q=' + encodeURIComponent(query.trim())) }}
             placeholder="Chiedi qualcosa sui dati... es. quanto spendiamo in birra?"
-            className="flex-1 text-sm text-gray-900 focus:outline-none bg-transparent"
+            className="flex-1 text-sm text-ink bg-transparent placeholder:text-muted focus:outline-none"
           />
         </div>
       </div>
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
-        <button onClick={() => setSeason('all')} className={season === 'all' ? 'px-4 py-2 rounded-xl text-sm font-semibold bg-gray-900 text-white flex-shrink-0' : 'px-4 py-2 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-600 flex-shrink-0'}>
+
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-1 -mx-4 px-4">
+        <button
+          onClick={() => setSeason('all')}
+          className={season === 'all'
+            ? 'px-4 py-2 rounded-full text-sm font-semibold bg-green-600 text-white shadow-sm shadow-green-600/30 flex-shrink-0 transition'
+            : 'px-4 py-2 rounded-full text-sm font-medium bg-surface border border-line text-muted hover:text-ink flex-shrink-0 transition'}
+        >
           Tutte
         </button>
         {seasons.map(s => (
-          <button key={s} onClick={() => setSeason(s)} className={season === s ? 'px-4 py-2 rounded-xl text-sm font-semibold bg-gray-900 text-white flex-shrink-0' : 'px-4 py-2 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-600 flex-shrink-0'}>
-          Stagione {s}
+          <button
+            key={s}
+            onClick={() => setSeason(s)}
+            className={season === s
+              ? 'px-4 py-2 rounded-full text-sm font-semibold bg-green-600 text-white shadow-sm shadow-green-600/30 flex-shrink-0 transition'
+              : 'px-4 py-2 rounded-full text-sm font-medium bg-surface border border-line text-muted hover:text-ink flex-shrink-0 transition'}
+          >
+            Stagione {s}
           </button>
         ))}
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-6">
-        <div onClick={() => router.push('/costi')} className="bg-white rounded-2xl p-4 border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors text-left">
+        <div onClick={() => router.push('/costi')} className="bg-surface rounded-2xl p-4 border border-line shadow-sm hover:shadow-md hover:border-red-200 dark:hover:border-red-900/60 transition cursor-pointer text-left">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-              <TrendingDown size={16} className="text-red-600" />
+            <div className="w-9 h-9 bg-red-50 dark:bg-red-950/40 rounded-xl flex items-center justify-center">
+              <TrendingDown size={17} className="text-red-600 dark:text-red-400" />
             </div>
-            <span className="text-xs font-medium text-gray-500">Spese</span>
+            <span className="text-xs font-medium text-muted">Spese</span>
           </div>
-          <p className="text-xl font-bold text-gray-900">CHF {spese.toLocaleString('it-CH', { minimumFractionDigits: 2 })}</p>
-          <p className="text-xs text-gray-400 mt-1">{season === 'all' ? 'totale confermate' : 'stagione ' + season}</p>
+          <p className="text-2xl font-bold tracking-tight tnum text-red-600 dark:text-red-400">CHF {spese.toLocaleString('it-CH', { minimumFractionDigits: 2 })}</p>
+          <p className="text-xs text-muted mt-1">{season === 'all' ? 'totale confermate' : 'stagione ' + season}</p>
         </div>
 
-        <div onClick={() => router.push('/incassi')} className="bg-white rounded-2xl p-4 border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors text-left">
+        <div onClick={() => router.push('/incassi')} className="bg-surface rounded-2xl p-4 border border-line shadow-sm hover:shadow-md hover:border-green-200 dark:hover:border-green-900/60 transition cursor-pointer text-left">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-              <TrendingUp size={16} className="text-green-600" />
+            <div className="w-9 h-9 bg-green-50 dark:bg-green-950/40 rounded-xl flex items-center justify-center">
+              <TrendingUp size={17} className="text-green-600 dark:text-green-400" />
             </div>
-            <span className="text-xs font-medium text-gray-500">Incassi</span>
+            <span className="text-xs font-medium text-muted">Incassi</span>
           </div>
-          <p className="text-xl font-bold text-gray-900">CHF {incassi.toLocaleString('it-CH', { minimumFractionDigits: 2 })}</p>
-          <p className="text-xs text-gray-400 mt-1">{season === 'all' ? 'totale confermati' : 'stagione ' + season}</p>
+          <p className="text-2xl font-bold tracking-tight tnum text-green-600 dark:text-green-400">CHF {incassi.toLocaleString('it-CH', { minimumFractionDigits: 2 })}</p>
+          <p className="text-xs text-muted mt-1">{season === 'all' ? 'totale confermati' : 'stagione ' + season}</p>
         </div>
 
-        <div onClick={() => router.push('/documenti')} className="bg-white rounded-2xl p-4 border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors text-left">
+        <div onClick={() => router.push('/documenti')} className="bg-surface rounded-2xl p-4 border border-line shadow-sm hover:shadow-md hover:border-blue-200 dark:hover:border-blue-900/60 transition cursor-pointer text-left">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-              <FileText size={16} className="text-blue-600" />
+            <div className="w-9 h-9 bg-blue-50 dark:bg-blue-950/40 rounded-xl flex items-center justify-center">
+              <FileText size={17} className="text-blue-600 dark:text-blue-400" />
             </div>
-            <span className="text-xs font-medium text-gray-500">Documenti</span>
+            <span className="text-xs font-medium text-muted">Documenti</span>
           </div>
-          <p className="text-xl font-bold text-gray-900">{numDocs}</p>
-          <p className="text-xs text-gray-400 mt-1">caricati</p>
+          <p className="text-2xl font-bold tracking-tight tnum text-ink">{numDocs}</p>
+          <p className="text-xs text-muted mt-1">caricati</p>
         </div>
 
-        <div onClick={() => router.push('/documenti')} className="bg-white rounded-2xl p-4 border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors text-left">
+        <div onClick={() => router.push('/documenti')} className="bg-surface rounded-2xl p-4 border border-line shadow-sm hover:shadow-md hover:border-amber-200 dark:hover:border-amber-900/60 transition cursor-pointer text-left">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-              <AlertCircle size={16} className="text-orange-600" />
+            <div className="w-9 h-9 bg-amber-50 dark:bg-amber-950/40 rounded-xl flex items-center justify-center">
+              <AlertCircle size={17} className="text-amber-600 dark:text-amber-400" />
             </div>
-            <span className="text-xs font-medium text-gray-500">Da confermare</span>
+            <span className="text-xs font-medium text-muted">Da confermare</span>
           </div>
-          <p className="text-xl font-bold text-gray-900">{daConfermare}</p>
-          <p className="text-xs text-gray-400 mt-1">documenti</p>
+          <p className="text-2xl font-bold tracking-tight tnum text-ink">{daConfermare}</p>
+          <p className="text-xs text-muted mt-1">documenti</p>
         </div>
       </div>
 
       <div className="mb-6">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">Azioni rapide</h2>
+        <h2 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Azioni rapide</h2>
         <div className="grid grid-cols-4 gap-3">
-          <button onClick={() => router.push('/incassi/nuovo')} className="bg-green-600 text-white rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-green-700 transition-colors">
+          <button onClick={() => router.push('/incassi/nuovo')} className="bg-green-600 text-white rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-green-700 shadow-sm shadow-green-600/30 transition-colors">
             <TrendingUp size={20} />
             <span className="text-xs font-medium">Incasso</span>
           </button>
-          <button onClick={() => router.push('/documenti/nuovo')} className="bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-gray-50 transition-colors">
-            <FileText size={20} />
+          <button onClick={() => router.push('/documenti/nuovo')} className="bg-surface border border-line text-ink rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-page transition-colors">
+            <FileText size={20} className="text-blue-600 dark:text-blue-400" />
             <span className="text-xs font-medium">Documento</span>
           </button>
-          <button onClick={() => router.push('/costi/nuovo')} className="bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-gray-50 transition-colors">
-            <TrendingDown size={20} />
+          <button onClick={() => router.push('/costi/nuovo')} className="bg-surface border border-line text-ink rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-page transition-colors">
+            <TrendingDown size={20} className="text-red-600 dark:text-red-400" />
             <span className="text-xs font-medium">Spesa</span>
           </button>
-          <button onClick={() => router.push('/fornitori')} className="bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-gray-50 transition-colors">
-            <Truck size={20} />
+          <button onClick={() => router.push('/fornitori')} className="bg-surface border border-line text-ink rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-page transition-colors">
+            <Truck size={20} className="text-muted" />
             <span className="text-xs font-medium">Fornitore</span>
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 p-4">
+      <div className={`rounded-2xl border p-5 shadow-sm ${incassi - spese >= 0 ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900/50' : 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/50'}`}>
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-gray-900">Saldo{season !== 'all' ? ' ' + season : ''}</span>
-          <span className={incassi - spese >= 0 ? 'text-lg font-bold text-green-600' : 'text-lg font-bold text-red-600'}>
+          <span className="text-sm font-semibold text-ink">Saldo{season !== 'all' ? ' ' + season : ''}</span>
+          <span className={`text-2xl font-bold tnum ${incassi - spese >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
             CHF {(incassi - spese).toLocaleString('it-CH', { minimumFractionDigits: 2 })}
           </span>
         </div>

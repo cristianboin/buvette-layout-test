@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-import { ArrowLeft, Upload, Check, Sparkles, Clock, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Upload, Check, Sparkles, Clock, CircleAlert as AlertCircle } from 'lucide-react'
 
 type FileState = {
   file: File
@@ -92,7 +92,8 @@ export default function NuovoDocumentoPage() {
 
         setState(i, 'lettura')
         const base64 = await toBase64(file)
-        const mediaType = file.type || (fileType === 'pdf' ? 'application/pdf' : 'image/jpeg')
+        const ext = file.name.split('.').pop()?.toLowerCase()
+        const mediaType = file.type || (ext === 'pdf' ? 'application/pdf' : 'image/jpeg')
         const res = await fetch('/api/estrai', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
