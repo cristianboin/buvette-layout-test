@@ -20,6 +20,7 @@ export default function ChiediPage() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const askedRef = useRef(false)
 
   useEffect(() => {
     async function loadData() {
@@ -82,6 +83,13 @@ export default function ChiediPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [msgs, loading])
+
+  useEffect(() => {
+    if (!dati || askedRef.current) return
+    const q = new URLSearchParams(window.location.search).get('q')
+    if (q) { askedRef.current = true; ask(q) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dati])
 
   async function ask(q: string) {
     const question = q.trim()

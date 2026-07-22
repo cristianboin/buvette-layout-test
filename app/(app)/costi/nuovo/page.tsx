@@ -9,6 +9,12 @@ type Ev = { id: string; name: string }
 type Cat = { id: string; name: string }
 type Supplier = { id: string; name: string }
 
+function currentSeason(): string {
+  const now = new Date()
+  const start = now.getMonth() + 1 >= 8 ? now.getFullYear() : now.getFullYear() - 1
+  return start + '-' + String(start + 1).slice(2)
+}
+
 export default function NuovoSostoPage() {
   const router = useRouter()
   const supabase = createClient()
@@ -19,6 +25,8 @@ export default function NuovoSostoPage() {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
   const [newSupplierName, setNewSupplierName] = useState('')
+  const [newEventName, setNewEventName] = useState('')
+  const [newEventType, setNewEventType] = useState('feste')
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
     event_id: '',
@@ -54,7 +62,7 @@ export default function NuovoSostoPage() {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
 
-    // Fornitore nuovo: crealo (o riusa se esiste gia con lo stesso nome)
+    // Fornitore nuovo al volo
     let supplierId: string | null = form.supplier_id || null
     if (form.supplier_id === '__new__') {
       const nm = newSupplierName.trim()
@@ -69,9 +77,24 @@ export default function NuovoSostoPage() {
       }
     }
 
+    // Evento nuovo al volo
+    let eventId: string | null = form.event_id || null
+    if (form.event_id === '__new__') {
+      const nm = newEventName.trim()
+      if (!nm) { setError('Scrivi il nome del nuovo evento'); setLoading(false); return }
+      const { data: created, error: eEv } = await supabase.from('events').insert({
+        name: nm,
+        type: newEventType,
+        season: currentSeason(),
+        status: 'active',
+      }).select('id').single()
+      if (eEv || !created) { setError('Errore creazione evento: ' + (eEv?.message || '')); setLoading(false); return }
+      eventId = created.id
+    }
+
     const { error: eIns } = await supabase.from('manual_expenses').insert({
       date: form.date,
-      event_id: form.event_id || null,
+      event_id: eventId,
       category_id: form.category_id || null,
       supplier_id: supplierId,
       description: form.description,
@@ -152,7 +175,25 @@ export default function NuovoSostoPage() {
           <select name="event_id" value={form.event_id} onChange={handleChange} className="w-full text-sm text-gray-900 focus:outline-none bg-transparent">
             <option value="">Seleziona evento...</option>
             {events.map(ev => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
+            <option value="__new__">+ Crea nuovo evento...</option>
           </select>
+          {form.event_id === '__new__' && (
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              <input
+                type="text"
+                value={newEventName}
+                onChange={e => setNewEventName(e.target.value)}
+                placeholder="Nome nuovo evento"
+                className="text-sm text-gray-900 border border-green-300 rounded-xl px-3 py-2 focus:outline-none focus:border-green-500"
+              />
+              <select value={newEventType} onChange={e => setNewEventType(e.target.value)} className="text-sm text-gray-900 border border-green-300 rounded-xl px-2 py-2 bg-white focus:outline-none">
+                <option value="feste">Feste</option>
+                <option value="torneo">Torneo</option>
+                <option value="campionato">Campionato</option>
+                <option value="generale">Generale</option>
+              </select>
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200 p-4">

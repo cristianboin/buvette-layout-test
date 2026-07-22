@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { TrendingDown, TrendingUp, FileText, AlertCircle, Truck } from 'lucide-react'
+import { TrendingDown, TrendingUp, FileText, AlertCircle, Truck, Sparkles } from 'lucide-react'
 
 type Mov = { amount: number; event_id: string | null; date: string | null }
 type Ev = { id: string; season: string | null }
@@ -27,6 +27,7 @@ export default function DashboardPage() {
   const [daConfermare, setDaConfermare] = useState(0)
   const [season, setSeason] = useState(seasonFromDate(new Date().toISOString().slice(0, 10)) || 'all')
   const router = useRouter()
+  const [query, setQuery] = useState('')
   const supabase = createClient()
 
   useEffect(() => {
@@ -83,6 +84,19 @@ export default function DashboardPage() {
         <p className="text-sm text-gray-500 mt-1">{email}</p>
       </div>
 
+      <div className="flex gap-2 mb-4">
+        <div className="flex-1 flex items-center gap-2 bg-white border border-gray-200 rounded-2xl px-4 py-3">
+          <Sparkles size={16} className="text-purple-500 flex-shrink-0" />
+          <input
+            type="text"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && query.trim()) router.push('/chiedi?q=' + encodeURIComponent(query.trim())) }}
+            placeholder="Chiedi qualcosa sui dati... es. quanto spendiamo in birra?"
+            className="flex-1 text-sm text-gray-900 focus:outline-none bg-transparent"
+          />
+        </div>
+      </div>
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
         <button onClick={() => setSeason('all')} className={season === 'all' ? 'px-4 py-2 rounded-xl text-sm font-semibold bg-gray-900 text-white flex-shrink-0' : 'px-4 py-2 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-600 flex-shrink-0'}>
           Tutte
