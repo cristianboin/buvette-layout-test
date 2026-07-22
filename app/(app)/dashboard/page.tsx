@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { TrendingDown, TrendingUp, FileText, AlertCircle } from 'lucide-react'
+import { TrendingDown, TrendingUp, FileText, AlertCircle, Truck } from 'lucide-react'
 
 type Mov = { amount: number; event_id: string | null; date: string | null }
 type Ev = { id: string; season: string | null }
@@ -142,7 +142,7 @@ export default function DashboardPage() {
 
       <div className="mb-6">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Azioni rapide</h2>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-3">
           <button onClick={() => router.push('/incassi/nuovo')} className="bg-green-600 text-white rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-green-700 transition-colors">
             <TrendingUp size={20} />
             <span className="text-xs font-medium">Incasso</span>
@@ -154,6 +154,10 @@ export default function DashboardPage() {
           <button onClick={() => router.push('/costi/nuovo')} className="bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-gray-50 transition-colors">
             <TrendingDown size={20} />
             <span className="text-xs font-medium">Spesa</span>
+          </button>
+          <button onClick={() => router.push('/fornitori')} className="bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-gray-50 transition-colors">
+            <Truck size={20} />
+            <span className="text-xs font-medium">Fornitore</span>
           </button>
         </div>
       </div>

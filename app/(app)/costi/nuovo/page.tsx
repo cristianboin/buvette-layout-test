@@ -17,6 +17,8 @@ export default function NuovoSostoPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [error, setError] = useState('')
+  const [newSupplierName, setNewSupplierName] = useState('')
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
     event_id: '',
@@ -48,13 +50,30 @@ export default function NuovoSostoPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setError('')
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
-    const { error } = await supabase.from('manual_expenses').insert({
+
+    // Fornitore nuovo: crealo (o riusa se esiste gia con lo stesso nome)
+    let supplierId: string | null = form.supplier_id || null
+    if (form.supplier_id === '__new__') {
+      const nm = newSupplierName.trim()
+      if (!nm) { setError('Scrivi il nome del nuovo fornitore'); setLoading(false); return }
+      const { data: found } = await supabase.from('suppliers').select('id').ilike('name', nm).limit(1)
+      if (found && found[0]) {
+        supplierId = found[0].id
+      } else {
+        const { data: created, error: eSup } = await supabase.from('suppliers').insert({ name: nm }).select('id').single()
+        if (eSup || !created) { setError('Errore creazione fornitore: ' + (eSup?.message || '')); setLoading(false); return }
+        supplierId = created.id
+      }
+    }
+
+    const { error: eIns } = await supabase.from('manual_expenses').insert({
       date: form.date,
       event_id: form.event_id || null,
       category_id: form.category_id || null,
-      supplier_id: form.supplier_id || null,
+      supplier_id: supplierId,
       description: form.description,
       amount_incl: parseFloat(form.amount_incl || '0'),
       payment_method: form.payment_method,
@@ -62,7 +81,8 @@ export default function NuovoSostoPage() {
       status: 'confirmed',
       created_by: user?.id,
     })
-    if (!error) { setSuccess(true); setTimeout(() => router.push('/costi'), 1500) }
+    if (!eIns) { setSuccess(true); setTimeout(() => router.push('/costi'), 1500) }
+    else setError('Errore salvataggio: ' + eIns.message)
     setLoading(false)
   }
 
@@ -106,7 +126,17 @@ export default function NuovoSostoPage() {
           <select name="supplier_id" value={form.supplier_id} onChange={handleChange} className="w-full text-sm text-gray-900 focus:outline-none bg-transparent">
             <option value="">Seleziona fornitore...</option>
             {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            <option value="__new__">+ Crea nuovo fornitore...</option>
           </select>
+          {form.supplier_id === '__new__' && (
+            <input
+              type="text"
+              value={newSupplierName}
+              onChange={e => setNewSupplierName(e.target.value)}
+              placeholder="Nome del nuovo fornitore"
+              className="w-full text-sm text-gray-900 border border-green-300 rounded-xl px-3 py-2 mt-3 focus:outline-none focus:border-green-500"
+            />
+          )}
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200 p-4">
@@ -141,6 +171,8 @@ export default function NuovoSostoPage() {
           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Note</label>
           <textarea name="notes" value={form.notes} onChange={handleChange} rows={2} placeholder="Aggiungi una nota..." className="w-full text-sm text-gray-900 focus:outline-none resize-none" />
         </div>
+
+        {error && <p className="text-sm text-red-600 bg-red-50 px-4 py-3 rounded-xl">{error}</p>}
 
         <button type="submit" disabled={loading || !form.description || !form.amount_incl} className="w-full bg-green-600 text-white py-4 rounded-2xl font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors">
           {loading ? 'Salvataggio...' : 'Registra spesa'}
