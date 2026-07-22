@@ -17,7 +17,8 @@ import {
   Calendar,
   Settings,
   LogOut,
-  Sparkles
+  Sparkles,
+  Calculator
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 
@@ -31,6 +32,7 @@ const bottomNav = [
 
 const hamburgerMenu = [
   { href: '/chiedi', icon: Sparkles, label: 'Chiedi (AI)' },
+  { href: '/chiusura', icon: Calculator, label: 'Chiusura cassa' },
   { href: '/documenti', icon: FileText, label: 'Documenti' },
   { href: '/fornitori', icon: Truck, label: 'Fornitori' },
   { href: '/prodotti', icon: Package, label: 'Prodotti' },

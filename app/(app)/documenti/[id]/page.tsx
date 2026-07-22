@@ -74,6 +74,44 @@ export default function DocumentoDettaglioPage() {
   const catIdByName = (nm: string | null) => cats.find(c => c.name === nm)?.id || null
   const sommaRighe = righe.reduce((s, r) => s + (Number(r.totale) || 0), 0)
 
+  async function handleExtract() {
+    setError('')
+    setSaving(true)
+    try {
+      const resp = await fetch(fileUrl)
+      const blob = await resp.blob()
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader()
+        r.onload = () => resolve(String(r.result).split(',')[1])
+        r.onerror = () => reject(new Error('lettura file fallita'))
+        r.readAsDataURL(blob)
+      })
+      const ext = fileName.split('.').pop()?.toLowerCase()
+      const mediaType = ext === 'pdf' ? 'application/pdf' : (blob.type || 'image/jpeg')
+      const { data: cats2 } = await supabase.from('categories').select('name, type')
+      const expenseCats = (cats2 || []).filter(c => c.type === 'expense')
+      const catNames = (expenseCats.length > 0 ? expenseCats : (cats2 || [])).map(c => c.name)
+      const res = await fetch('/api/estrai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileBase64: base64, mediaType, categories: catNames }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.data) throw new Error(json.error || 'lettura non riuscita')
+      const tipoMap: Record<string, string> = { fattura: 'invoice', ricevuta: 'receipt', altro: 'other' }
+      const { error: eUpd } = await supabase.from('documents').update({
+        extraction_data: json.data,
+        detected_type: tipoMap[json.data.tipo] || 'other',
+        status: 'to_confirm',
+      }).eq('id', docId)
+      if (eUpd) throw new Error(eUpd.message)
+      window.location.reload()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Errore lettura AI')
+    }
+    setSaving(false)
+  }
+
   async function handleDelete() {
     const msg = status === 'confirmed'
       ? 'Documento confermato: la fattura creata restera nel database, verra eliminato solo il file. Continuare?'
@@ -195,6 +233,11 @@ export default function DocumentoDettaglioPage() {
           <a href={fileUrl} target="_blank" rel="noreferrer" className="p-2 rounded-xl hover:bg-gray-100">
             <FileText size={18} className="text-blue-600" />
           </a>
+        )}
+        {status === 'pending' && (
+          <button onClick={handleExtract} disabled={saving} className="flex items-center gap-1 bg-purple-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-purple-700 disabled:opacity-50 transition-colors">
+            <Sparkles size={14} /> {saving ? 'Leggo...' : 'Leggi con AI'}
+          </button>
         )}
         <button onClick={handleDelete} disabled={saving} className="p-2 rounded-xl hover:bg-red-50 disabled:opacity-50 transition-colors" title="Elimina documento">
           <Trash2 size={18} className="text-red-500" />
