@@ -8,6 +8,12 @@ import { ArrowLeft, Check } from 'lucide-react'
 type Ev = { id: string; name: string; type: string }
 type Cat = { id: string; name: string }
 
+function currentSeason(): string {
+  const now = new Date()
+  const start = now.getMonth() + 1 >= 8 ? now.getFullYear() : now.getFullYear() - 1
+  return start + '-' + String(start + 1).slice(2)
+}
+
 export default function NuovoIncassoPage() {
   const router = useRouter()
   const supabase = createClient()
@@ -18,6 +24,8 @@ export default function NuovoIncassoPage() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [eventId, setEventId] = useState('')
   const [avversario, setAvversario] = useState('')
+  const [newEventName, setNewEventName] = useState('')
+  const [newEventType, setNewEventType] = useState('feste')
   const [notes, setNotes] = useState('')
   const [amounts, setAmounts] = useState<Record<string, { cash: string; card: string }>>({})
 
@@ -34,6 +42,7 @@ export default function NuovoIncassoPage() {
   }, [])
 
   const selectedEvent = events.find(e => e.id === eventId)
+  const isNewEvent = eventId === '__new__'
   const isCampionato = selectedEvent?.type === 'campionato'
 
   const visibleCategories = isCampionato
@@ -55,11 +64,25 @@ export default function NuovoIncassoPage() {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
 
+    let realEventId: string | null = eventId || null
+    if (eventId === '__new__') {
+      const nm = newEventName.trim()
+      if (!nm) { setLoading(false); return }
+      const { data: created, error: eEv } = await supabase.from('events').insert({
+        name: nm,
+        type: newEventType,
+        season: currentSeason(),
+        status: 'active',
+      }).select('id').single()
+      if (eEv || !created) { setLoading(false); return }
+      realEventId = created.id
+    }
+
     const rows = Object.entries(amounts)
       .filter(([, a]) => parseFloat(a.cash || '0') + parseFloat(a.card || '0') > 0)
       .map(([catId, a]) => ({
         date,
-        event_id: eventId || null,
+        event_id: realEventId,
         category_id: catId,
         cash_amount: parseFloat(a.cash || '0'),
         card_amount: parseFloat(a.card || '0'),
@@ -111,7 +134,25 @@ export default function NuovoIncassoPage() {
           <select value={eventId} onChange={e => setEventId(e.target.value)} required className="w-full text-sm text-gray-900 focus:outline-none bg-transparent">
             <option value="">Seleziona evento...</option>
             {events.map(ev => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
+            <option value="__new__">+ Crea nuovo evento...</option>
           </select>
+          {eventId === '__new__' && (
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              <input
+                type="text"
+                value={newEventName}
+                onChange={e => setNewEventName(e.target.value)}
+                placeholder="Nome nuovo evento"
+                className="text-sm text-gray-900 border border-green-300 rounded-xl px-3 py-2 focus:outline-none focus:border-green-500"
+              />
+              <select value={newEventType} onChange={e => setNewEventType(e.target.value)} className="text-sm text-gray-900 border border-green-300 rounded-xl px-2 py-2 bg-white focus:outline-none">
+                <option value="feste">Feste</option>
+                <option value="torneo">Torneo</option>
+                <option value="campionato">Campionato</option>
+                <option value="generale">Generale</option>
+              </select>
+            </div>
+          )}
         </div>
 
         {isCampionato && (

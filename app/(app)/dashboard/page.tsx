@@ -109,7 +109,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="bg-white rounded-2xl p-4 border border-gray-200">
+        <div onClick={() => router.push('/costi')} className="bg-white rounded-2xl p-4 border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors text-left">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
               <TrendingDown size={16} className="text-red-600" />
@@ -120,7 +120,7 @@ export default function DashboardPage() {
           <p className="text-xs text-gray-400 mt-1">{season === 'all' ? 'totale confermate' : 'stagione ' + season}</p>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 border border-gray-200">
+        <div onClick={() => router.push('/incassi')} className="bg-white rounded-2xl p-4 border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors text-left">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
               <TrendingUp size={16} className="text-green-600" />
@@ -131,7 +131,7 @@ export default function DashboardPage() {
           <p className="text-xs text-gray-400 mt-1">{season === 'all' ? 'totale confermati' : 'stagione ' + season}</p>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 border border-gray-200">
+        <div onClick={() => router.push('/documenti')} className="bg-white rounded-2xl p-4 border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors text-left">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
               <FileText size={16} className="text-blue-600" />
@@ -142,7 +142,7 @@ export default function DashboardPage() {
           <p className="text-xs text-gray-400 mt-1">caricati</p>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 border border-gray-200">
+        <div onClick={() => router.push('/documenti')} className="bg-white rounded-2xl p-4 border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors text-left">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
               <AlertCircle size={16} className="text-orange-600" />

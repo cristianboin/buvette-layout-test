@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
-import { ArrowLeft, Check, FileText, Sparkles } from 'lucide-react'
+import { ArrowLeft, Check, FileText, Sparkles, Trash2 } from 'lucide-react'
 import { useRouter, useParams } from 'next/navigation'
 
 type Cat = { id: string; name: string }
@@ -73,6 +73,24 @@ export default function DocumentoDettaglioPage() {
 
   const catIdByName = (nm: string | null) => cats.find(c => c.name === nm)?.id || null
   const sommaRighe = righe.reduce((s, r) => s + (Number(r.totale) || 0), 0)
+
+  async function handleDelete() {
+    const msg = status === 'confirmed'
+      ? 'Documento confermato: la fattura creata restera nel database, verra eliminato solo il file. Continuare?'
+      : 'Eliminare questo documento? L\'operazione non si puo annullare.'
+    if (!window.confirm(msg)) return
+    setSaving(true)
+    const marker = '/documents/'
+    const idx = fileUrl.indexOf(marker)
+    if (idx !== -1) {
+      const storagePath = decodeURIComponent(fileUrl.slice(idx + marker.length))
+      await supabase.storage.from('documents').remove([storagePath])
+    }
+    const { error: eDel } = await supabase.from('documents').delete().eq('id', docId)
+    setSaving(false)
+    if (eDel) { setError('Impossibile eliminare: ' + eDel.message); return }
+    router.push('/documenti')
+  }
 
   async function handleConfirm() {
     setError('')
@@ -178,6 +196,9 @@ export default function DocumentoDettaglioPage() {
             <FileText size={18} className="text-blue-600" />
           </a>
         )}
+        <button onClick={handleDelete} disabled={saving} className="p-2 rounded-xl hover:bg-red-50 disabled:opacity-50 transition-colors" title="Elimina documento">
+          <Trash2 size={18} className="text-red-500" />
+        </button>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-4 space-y-3">
